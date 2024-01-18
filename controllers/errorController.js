@@ -31,71 +31,67 @@ const handleJWTExpiredError = err => new AppError("Token Expired, Please log in 
 
 
 
-const sendErrorDev = (err, res) => {
-    //API
+const sendErrorDev = (err, req, res) => {
+    //A) API
     if(req.originalUrl.startsWith('/api')) {
         console.log(">>>>>>>>>>",err)
-        res.status(err.statusCode).json({
+       return res.status(err.statusCode).json({
             status: err.status,
             error: err,
             message: err.message,
             stack: err.stack
     }); 
-    } else  {
-        //RENDERED WEBSITE
-        res.status(err.statusCode).render('error', {
+    } 
+        //B)  RENDERED WEBSITE
+        console.log(">>>>>>>>>>",err)
+       return res.status(err.statusCode).render('error', {
             title: 'Something went wrong',
             msg: err.message
         })
-    }
+    };
 
-  };
-  
-  const sendErrorProd = (err, res) => {
-    //A) API
+  const sendErrorProd = (err, req, res) => {
+    //1) API
     if(req.originalUrl.startsWith("/api")) {
-             //Operational Error, trusted errors: send message to client
+        //A) Operational Error, trusted errors: send message to client
+
     //   console.log("here>>>>", err.isOperational)
       if(err.isOperational) {
-        res.status(err.statusCode).json({
+       return res.status(err.statusCode).json({
             status: err.status,
             message: err.message
         });
     }
-            //PRogramming or other unknown error: don't leak details
-        else {
+         //B) PRogramming or other unknown error: don't leak details
+
             //1) Log Error
             console.error('ERROR', err)
             //2) SEnd generic message
-            res.status(500).json({
+           return res.status(500).json({
                 status: 'ERROR',
                 message: 'Something went very very wrong'
             })
-        }
-    } else {
-        // B) RENDERED WEBSITE
+        
+    } 
+        // 2) RENDERED WEBSITE
 
         //Operational Error, trusted errors: send message to client
     //   console.log("here>>>>", err.isOperational)
       if(err.isOperational) {
-        res.status(err.statusCode).json({
-            status: err.status,
-            message: err.message
-        });
+     //RENDERED WEBSITE
+     return res.status(err.statusCode).render('error', {
+        title: 'Something went wrong',
+        msg: err.message
+    })
     }
-            //PRogramming or other unknown error: don't leak details
-        else {
+        //Programming or other unknown error: don't leak details
             //1) Log Error
             console.error('ERROR', err)
             //2) SEnd generic message
-            res.status(500).json({
-                status: 'ERROR',
-                message: 'Something went very very wrong'
+           return res.status(err.statusCode).render('error', {
+                title: 'Something went wrong',
+                msg: 'Please try again later!'
             })
-        }
-    }
- 
-    
   };
   
 module.exports = (err, req, res, next) => {
@@ -104,7 +100,7 @@ module.exports = (err, req, res, next) => {
       err.status = err.status || 'error';
 
       if(process.env.NODE_ENV === 'development') {
-          sendErrorDev(err, res) 
+          sendErrorDev(err, req, res) 
          
       } else if (process.env.NODE_ENV === 'production') {
        
@@ -116,7 +112,7 @@ module.exports = (err, req, res, next) => {
         if(error.name === "TokenExpiredError") error = handleJWTExpiredError(error)
 
 
-       sendErrorProd(error, res)
+       sendErrorProd(error, req, res)
      
       }
   };

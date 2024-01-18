@@ -1,6 +1,6 @@
 const User = require("./../models/userModel");
 const AppError = require("../utils/appError");
-const sendEmail = require("../utils/email");
+const Email = require("../utils/email");
 const catchAsync = require('../utils/catchAsync');
 const jwt = require("jsonwebtoken");
 const { promisify } = require("util");
@@ -40,6 +40,9 @@ const createSendToken = (user, statusCode, res) => {
 exports.signup = catchAsync(async (req, res, next) => {
  const newUser = await User.create(req.body)
 
+ const url = `${req.protocol}://${req.get('host')}/me`;
+  await new Email(newUser, url).sendWelcome()
+
  const payload = { id: newUser._id, name: newUser.name}
 
  createSendToken(newUser, 201, res)
@@ -78,7 +81,7 @@ exports.protect = catchAsync( async (req, res, next)  => {
 if(req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
          token = req.headers.authorization.split(" ")[1];// we re-assing this value to the token
     }
-    else if(req.cookies.jwt) {
+    else if(req.cookies.jwt) { 
      token = req.cookies.jwt
     }
 
@@ -124,6 +127,7 @@ exports.isLoggedIn = async (req, res, next)  => {
             return next()
            }
            //There is a logged in user
+           req.user = currentUser
             res.locals.user = currentUser 
             console.log("g>>>>>>", res.locals.user)
              return next()
@@ -158,19 +162,14 @@ exports.forgotPassword = catchAsync( async (req, res, next) => {
     //2 Generate the random token
     const resetToken = user.createPasswordResetToken();
     await user.save({ validateBeforeSave: false })
-    //3) Send it to user's email
-     const resetURL =`${req.protocol}://${req.get(
+
+    
+    //3) Send it to user's email   
+try {
+    const resetURL =`${req.protocol}://${req.get(
         'host'
         )}/api/v1/users/resetPassword/${resetToken}`;
-     
-    const message = `Forgot your password? Submit a PATCH request with your passsword and
-     passwordConfirm to: ${resetURL}. /if you didn't forget your password, please ignore this email!`;
-try {
-    await sendEmail({
-        email: user.email,
-        subject: 'Your password reset token (valid for 10 minutes)',
-        message
-     })
+    await new Email(user, resetURL).sendPasswordReset();
      
       res.status(200).json({
         status: 'success',
@@ -239,7 +238,7 @@ try {
     //   });
     exports.updatePassword = catchAsync(async (req, res, next) => {
         // 1) Get user from collection
-        let user = await User.findById(req.user.id).select('+password');
+        const user = await User.findById(req.user.id).select('+password');
       
         // 2) Check if POSTed current password is correct
         if (!(await user.correctPassword(req.body.passwordCurrent, user.password))) {
@@ -249,7 +248,7 @@ try {
         // 3) If so, update password
         user.password = req.body.password;
         user.passwordConfirm = req.body.passwordConfirm;
-       user =   await user.save();
+       await user.save();
         // User.findByIdAndUpdate will NOT work as intended!
       
         // 4) Log user in, send JWT

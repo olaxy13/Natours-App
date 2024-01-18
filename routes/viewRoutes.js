@@ -4,11 +4,14 @@ const authController = require ("../controllers/authController")
 
 const router = express.Router();   
 
-router.use(authController.isLoggedIn);
 
 //for rendering pages in the browser
-router.get('/', viewsController.getOverview);
-router.get('/tour/:slug', viewsController.getTour); //we use the slug to query for the tours  
-router.get('/login', viewsController.getLoginForm);
-// router.get('/tour', viewsController.getSignUpForm ) 
+router.get('/', authController.isLoggedIn, viewsController.getOverview);
+router.get('/tour/:slug', authController.isLoggedIn, viewsController.getTour); //we use the slug to query for the tours  
+router.get('/login', authController.isLoggedIn, viewsController.getLoginForm);
+router.get('/me', authController.protect, viewsController.getAccount);
+// router.get('/tour', viewsController.getSignUpForm ) ;
+
+router.post('/submit-user-data', authController.protect, viewsController.updateUserData)
+
 module.exports = router; 

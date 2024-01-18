@@ -10,3 +10,4 @@ export const showAlert = (type, msg) => {
     document.querySelector('body').insertAdjacentHTML('afterbegin', markup) //which means inside of the body but right at the begining and the mark up 
     window.setTimeout(hideAlert, 5000)
 }
+

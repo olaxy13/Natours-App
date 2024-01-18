@@ -3,7 +3,7 @@ const path = require("path")
 const express = require('express');
 const morgan = require('morgan');
 const rateLimit = require("express-rate-limit");
-const helmet = require ("helmet");
+const helmet = require ("helmet"); 
 const mongoSanitize = require("express-mongo-sanitize");
 const xss = require("xss-clean")
 const hpp = require("hpp");
@@ -78,6 +78,7 @@ app.use('/api', limiter) //it only works with route that starts with api
 
 //Body parser,  reading data from the body into req.body
 app.use(express.json({ limit: '10000kb '}));  //middleware=> a step btween req and res... The limit is set to 10kb so that user dosent passin too much unneccessary data that is not needed
+app.use(express.urlencoded({ extended: true, limit: '10kb'})) //middleware to parse data comig from a form... "form sends data to server via urlencoded""" extended is set to true to pass in complex data
 app.use(cookieParser());
 //SECURITY MIDDLEWARE
 
@@ -103,7 +104,7 @@ app.use(hpp({
 //Test Middleware
 app.use((req, res, next) => {
     req.requestTime = new Date().toISOString();
-    console.log(req.cookies)
+    // console.log(req.cookies)
   
     next()
 })
@@ -120,7 +121,7 @@ app.use('/api/v1/reviews', reviewRouter);
 
 
 //It should be the last 
-//To gandle all the route that wasn't defined 
+//To handle all the route that wasn't defined 
 app.all('*', (req, res, next)=> {
     // res.status(404).json({
     //     status: 'Fail',

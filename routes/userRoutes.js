@@ -1,6 +1,8 @@
 /* eslint-disable import/no-useless-path-segments */
 const express = require('express');
+const multer = require("multer");
 const userController = require('./../controllers/userController');
+
 
 const authController = require('./../controllers/authController');
 
@@ -9,7 +11,7 @@ const router = express.Router();
 
 
 router.post("/signup", authController.signup);
-router.post("/login", authController.login);
+router.post("/login", authController.login); 
 router.get("/logout", authController.logout);
 router.post("/forgotPassword", authController.forgotPassword);
 router.patch("/resetPassword/:token", authController.resetPassword);
@@ -22,7 +24,9 @@ router.patch("/updateMyPassword", authController.updatePassword);
 
 router.get("/me", userController.getMe, userController.getUser)
 router.patch("/updateMe", 
-userController.updateMe);
+userController. uploadUserPhoto, 
+userController.resizeUserPhoto,
+userController.updateMe);  //'photo' is the name of the field we want to upload a single picture to
 
 //DELETE
 router.delete("/deleteMe", 

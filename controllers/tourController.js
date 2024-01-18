@@ -1,9 +1,77 @@
 const { Query } = require('mongoose');
 const Tour = require('./../models/tourModel');
+const multer = require ("multer")
+const sharp = require('sharp'); //image processing library for nodejs
 const APIFeatures = require('./../utils/apiFeatures')
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const factory = require("./handlerFactory")
+
+const multerStorage = multer.memoryStorage(); //this way the image is stored as a buffer and the buffer is available at req.file below
+//this function is to test if the uploaded file is an image if 
+const multerFilter = (req, file, cb)=> {
+ if( file.mimetype.startsWith('image')) {
+    cb(null, true)
+ } else {
+    cb(new AppError("Not an Image! Please upload only images.", 400), false)
+ }
+}
+
+const upload = multer({ 
+   storage: multerStorage,
+   fileFilter: multerFilter  
+}) //middleware from multer we 'd use to upload photo
+
+exports.UploadTourImages = upload.fields([
+    {name: 'imageCover', maxCount: 1},
+    {name: "images", maxCount: 3}
+])
+
+//for a single image upload
+//upload.single("image"); it produces req.file
+
+//for multiple image upload with thesame name
+//upload.array("images", 5) it produces req.files
+
+//when there is a mix of single and multiple upload
+//upload.fields([
+//     {name: 'imageCover', maxCount: 1},
+//     {name: "images", maxCount: 3}
+// ]) it produces req.files
+
+
+exports.resizeTourImages = catchAsync(async (req, res, next) => { 
+    if (!req.files.imageCover || !req.files.images) return next();
+
+//1) Cover image
+    req.body.imageCover = `tour-${req.params.id}-${Date.now()}-cover.jpeg`
+//sharp is being use to adjust the images
+//the image is available to us in the buffer file
+    await sharp(req.files.imageCover[0].buffer)
+    .resize(2000, 1333)
+    .toFormat("jpeg") //to format to Jpe
+    .jpeg({quality: 90}) // to reduce quality
+    .toFile(`public/img/tours/${req.body.imageCover}`);//we write to a file on our disc
+
+    //2) Images
+    req.body.images = [];
+    //we use promise.all to await all the codes below before progressing before moving the next middleware
+ await Promise.all(//we use map to loop thru the array of images we use map so that we can save the 3 promises which are the result of the 3 async function below so we can await them all using Promise.all only after that we can move to the tour update handler
+            req.files.images.map(async (file, i) => {
+                const filename = `tour-${req.params.id}-${Date.now()}-${i + 1}.jpeg`
+            
+            await sharp(file.buffer)
+            .resize(2000, 1333)
+            .toFormat("jpeg") //to format to Jpeg
+            .jpeg({quality: 90}) // to reduce quality
+            .toFile(`public/img/tours/${filename}`);//we write to a file on our disc 
+   
+            req.body.images.push(filename)
+        })
+            )
+   
+      next()
+});
 //we are using this middleware to pre fill a route for the user
 //if they want to get the top 5 cheap route even if they don input it in the query
 exports.aliasTopTours = (req, res, next) => {

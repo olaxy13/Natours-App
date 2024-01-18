@@ -68,6 +68,7 @@ exports.getOne = (Model, populateOption) => catchAsync(async (req, res, next) =>
 
         //to allow for nexted get reviews on tour(hack)
         let filter = {};
+   
         if(req.params.tourId) {
             filter = {tour: req.params.tourId}
         }
